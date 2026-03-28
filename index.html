@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drive Navigation — BMW iDrive</title>
+<style>
+/* ================================================================
+   DRIVE NAVIGATION — BMW iDRIVE INSPIRED
+   Ground-up rebuild: div-based beam, conic-gradient rim reflection
+   ================================================================ */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: #050505; height: 100%; overflow: hidden; }
+
+.drive-nav {
+  --dn-bg: #0a0a0a;
+  --dn-knob-size: 120px;
+  --dn-text-dim: rgba(255,255,255,0.50);
+  --dn-text-lit: rgba(255,255,255,0.95);
+  --dn-font-size: 28px;
+  --beam-angle: 0rad;
+
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 500px;
+  background: var(--dn-bg);
+  display: flex;
+  align-items: center;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* ---- Background atmosphere ---- */
+.drive-nav::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 18% 50%, rgba(28,28,30,0.7) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 85% 15%, rgba(18,18,20,0.5) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+.drive-nav::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.6;
+  pointer-events: none; z-index: 0;
+}
+
+/* ---- Layout ---- */
+.drive-nav__inner {
+  position: relative; z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: clamp(50px, 9vw, 140px);
+  padding-left: clamp(30px, 8vw, 140px);
+  width: 100%;
+}
+
+/* ================================================================
+   KNOB
+   ================================================================ */
+.drive-nav__knob-wrap {
+  flex-shrink: 0;
+  position: relative;
+  width: var(--dn-knob-size);
+  height: var(--dn-knob-size);
+}
+
+.drive-nav__knob {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  will-change: transform;
+  transition: transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Outer metallic ring */
+.drive-nav__knob::before {
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(from 220deg,
+    rgba(58,58,63,1), rgba(38,38,43,1), rgba(68,68,73,1),
+    rgba(33,33,38,1), rgba(52,52,57,1), rgba(62,62,67,1),
+    rgba(36,36,41,1), rgba(58,58,63,1));
+  box-shadow:
+    0 0 30px rgba(0,0,0,0.8),
+    0 0 60px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    inset 0 -1px 0 rgba(0,0,0,0.5);
+  z-index: 0;
+  transition: box-shadow 0.3s ease;
+}
+
+/* ★★★ RIM REFLECTION — conic-gradient arc ★★★ */
+.drive-nav__knob-rim-reflect {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  z-index: 1;
+  pointer-events: none;
+
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0deg,
+    rgba(255,30,10,0.0) 8deg,
+    rgba(255,35,15,0.12) 18deg,
+    rgba(255,50,20,0.4) 32deg,
+    rgba(255,65,25,0.6) 42deg,
+    rgba(255,50,20,0.4) 52deg,
+    rgba(255,35,15,0.12) 62deg,
+    transparent 72deg,
+    transparent 360deg
+  );
+
+  -webkit-mask: radial-gradient(circle,
+    transparent 58%,
+    white 63%,
+    white 70%,
+    transparent 75%
+  );
+  mask: radial-gradient(circle,
+    transparent 58%,
+    white 63%,
+    white 70%,
+    transparent 75%
+  );
+
+  filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.drive-nav__knob-wrap.beam-active .drive-nav__knob-rim-reflect {
+  opacity: 1;
+}
+
+/* Knob face */
+.drive-nav__knob-face {
+  position: absolute; inset: 5px;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 65% 40% at 42% 32%, rgba(82,82,88,0.35) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, #1a1a1e 0%, #0c0c0f 100%);
+  box-shadow:
+    inset 0 2px 8px rgba(255,255,255,0.05),
+    inset 0 -4px 14px rgba(0,0,0,0.95),
+    0 8px 35px rgba(0,0,0,0.6);
+  z-index: 2;
+}
+
+/* Concentric detail rings */
+.drive-nav__knob-detail {
+  position: absolute; inset: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.035);
+  z-index: 3; pointer-events: none;
+}
+.drive-nav__knob-detail::before {
+  content: ''; position: absolute; inset: 7px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.025);
+}
+.drive-nav__knob-detail::after {
+  content: ''; position: absolute; inset: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.015);
+}
+
+/* Center pip */
+.drive-nav__knob-pip {
+  position: absolute; top: 50%; left: 50%;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.01) 100%);
+  z-index: 4; pointer-events: none;
+}
+
+/* Ambient knob glow (behind) */
+.drive-nav__knob-ambient {
+  position: absolute; inset: -28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,25,5,0.30) 0%, transparent 68%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none; z-index: -1;
+}
+.drive-nav__knob-wrap.beam-active .drive-nav__knob-ambient {
+  opacity: 0.4;
+}
+.drive-nav__knob-wrap.beam-active .drive-nav__knob::before {
+  box-shadow:
+    0 0 30px rgba(0,0,0,0.8),
+    0 0 12px rgba(255,30,10,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    inset 0 -1px 0 rgba(0,0,0,0.5);
+}
+
+/* ================================================================
+   BEAM SYSTEM — SEAMLESS JOINT
+   ================================================================ */
+.beam {
+  position: fixed; top: 0; left: 0;
+  width: 0; height: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Shared base for segments */
+.beam-diagonal,
+.beam-horizontal {
+  position: absolute;
+  top: 0; left: 0;
+  height: 0;
+  width: 0;
+  transform-origin: 0 50%;
+  will-change: transform, width, opacity;
+  z-index: 4;
+}
+
+/* ================================================================
+   DIAGONAL BEAM
+   Last 10% tapers softer to avoid hard cutoff before joint
+   ================================================================ */
+.beam-diagonal {
+  height: 2.5px;
+  background: linear-gradient(90deg,
+    rgba(255,20,5,0.0) 0%,
+    rgba(255,20,5,0.4) 2%,
+    rgba(255,25,8,0.7) 5%,
+    rgba(255,35,12,0.85) 12%,
+    rgba(255,45,18,0.95) 40%,
+    rgba(255,50,20,1) 70%,
+    rgba(255,50,20,1) 90%,
+    rgba(255,50,20,0.7) 100%
+  );
+  border-radius: 2px 0 0 2px;
+}
+
+/* Diagonal — outer glow */
+.beam-diagonal::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 10px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg,
+    rgba(255,20,5,0.0) 0%,
+    rgba(255,20,5,0.08) 5%,
+    rgba(255,30,10,0.18) 15%,
+    rgba(255,30,10,0.18) 85%,
+    rgba(255,30,10,0.10) 100%
+  );
+  filter: blur(5px);
+  border-radius: 6px 0 0 6px;
+}
+
+/* Diagonal — hot inner line */
+.beam-diagonal::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg,
+    rgba(255,180,160,0.0) 0%,
+    rgba(255,180,160,0.15) 5%,
+    rgba(255,200,180,0.35) 15%,
+    rgba(255,200,180,0.35) 85%,
+    rgba(255,200,180,0.2) 100%
+  );
+}
+
+/* ================================================================
+   HORIZONTAL BEAM — 3 layers
+   Left end starts at matching intensity (no fadein)
+   ================================================================ */
+
+/* LAYER A — CORE LINE */
+.beam-horizontal {
+  height: 2.5px;
+  background: linear-gradient(90deg,
+    rgba(255,50,20,0.7) 0%,
+    rgba(255,50,20,1) 3%,
+    rgba(255,60,25,1) 12%,
+    rgba(255,90,45,1) 30%,
+    rgba(255,60,25,1) 55%,
+    rgba(255,40,15,0.9) 75%,
+    rgba(255,25,8,0.7) 92%,
+    rgba(255,20,5,0.0) 100%
+  );
+  border-radius: 0 1.5px 1.5px 0;
+}
+
+/* LAYER B — TIGHT GLOW centered on beam */
+.beam-horizontal::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 16px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg,
+    rgba(255,40,15,0.45) 0%,
+    rgba(255,55,22,0.65) 8%,
+    rgba(255,55,22,0.55) 30%,
+    rgba(255,40,15,0.35) 60%,
+    rgba(255,25,8,0.15) 88%,
+    rgba(255,20,5,0.0) 100%
+  );
+  filter: blur(5px);
+  border-radius: 0 8px 8px 0;
+}
+
+/* LAYER C — SOFT AMBIENT */
+.beam-horizontal::after {
+  content: '';
+  position: absolute;
+  left: -4px; right: -4px;
+  top: 50%;
+  height: 30px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg,
+    rgba(255,45,18,0.18) 0%,
+    rgba(255,55,22,0.25) 10%,
+    rgba(255,55,22,0.18) 35%,
+    rgba(255,40,15,0.10) 65%,
+    rgba(255,30,10,0.04) 88%,
+    rgba(255,25,8,0.0) 100%
+  );
+  filter: blur(12px);
+  border-radius: 0 16px 16px 0;
+}
+
+/* ================================================================
+   JOINT BLEND — micro radial at the bend point
+   ================================================================ */
+.beam-joint-blend {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255,80,40,0.95) 0%,
+    rgba(255,55,22,0.7) 35%,
+    rgba(255,35,12,0.3) 65%,
+    transparent 100%
+  );
+  filter: blur(2px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+
+/* Exit bloom — at beam origin on rim */
+.beam-exit-bloom {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255,45,15,0.8) 0%,
+    rgba(255,25,8,0.4) 40%,
+    rgba(255,20,5,0.0) 100%
+  );
+  filter: blur(4px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 4;
+}
+
+/* ================================================================
+   MENU
+   ================================================================ */
+.drive-nav__menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(20px, 3.5vh, 42px);
+  position: relative;
+  z-index: 10;
+}
+
+.drive-nav__item {
+  position: relative;
+  display: inline-block;
+  padding: 10px 0;
+  text-decoration: none;
+  color: var(--dn-text-dim);
+  font-size: var(--dn-font-size);
+  font-weight: 300;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color 0.22s ease,
+    font-weight 0.22s ease,
+    text-shadow 0.3s ease;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.drive-nav__item.is-hovered {
+  color: var(--dn-text-lit);
+  font-weight: 500;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .drive-nav { --dn-knob-size: 100px; --dn-font-size: 20px; }
+  .drive-nav__inner { gap: 35px; padding-left: 20px; }
+}
+@media (max-width: 480px) {
+  .drive-nav { --dn-knob-size: 80px; --dn-font-size: 17px; }
+  .drive-nav__inner { gap: 24px; padding-left: 16px; }
+}
+
+/* ---- Entrance animation ---- */
+.drive-nav__item { opacity: 0; transform: translateX(22px); }
+.drive-nav.is-visible .drive-nav__item {
+  animation: dn-in 0.6s cubic-bezier(0.23,1,0.32,1) forwards;
+}
+.drive-nav__knob-wrap { opacity: 0; transform: scale(0.82); }
+.drive-nav.is-visible .drive-nav__knob-wrap {
+  animation: dn-knob 0.7s cubic-bezier(0.23,1,0.32,1) forwards;
+}
+@keyframes dn-in { to { opacity: 1; transform: translateX(0); } }
+@keyframes dn-knob { to { opacity: 1; transform: scale(1); } }
+</style>
+</head>
+<body>
+
+<section class="drive-nav" id="drive-nav-preview" role="navigation" aria-label="Drive Navigation">
+
+  <!-- BEAM CONTAINER (positioned via JS) -->
+  <div class="beam" id="beam">
+    <div class="beam-diagonal" id="beam-diag"></div>
+    <div class="beam-horizontal" id="beam-horiz"></div>
+    <div class="beam-joint-blend" id="beam-joint"></div>
+    <div class="beam-exit-bloom" id="beam-bloom"></div>
+  </div>
+
+  <div class="drive-nav__inner">
+
+    <!-- KNOB -->
+    <div class="drive-nav__knob-wrap" id="knob-wrap">
+      <div class="drive-nav__knob-ambient"></div>
+      <div class="drive-nav__knob" id="knob-el">
+        <div class="drive-nav__knob-rim-reflect" id="knob-rim"></div>
+        <div class="drive-nav__knob-face"></div>
+        <div class="drive-nav__knob-detail"></div>
+        <div class="drive-nav__knob-pip"></div>
+      </div>
+    </div>
+
+    <!-- MENU -->
+    <nav class="drive-nav__menu" id="menu">
+      <a href="#" class="drive-nav__item" data-drive-item style="animation-delay:0.30s">PRODUCTS</a>
+      <a href="#" class="drive-nav__item" data-drive-item style="animation-delay:0.40s">GALLERY</a>
+      <a href="#" class="drive-nav__item" data-drive-item style="animation-delay:0.50s">SERVICES</a>
+      <a href="#" class="drive-nav__item" data-drive-item style="animation-delay:0.60s">ABOUT</a>
+      <a href="#" class="drive-nav__item" data-drive-item style="animation-delay:0.70s">CONTACT</a>
+    </nav>
+  </div>
+</section>
+
+<script>
+(function() {
+  'use strict';
+
+  var section     = document.getElementById('drive-nav-preview');
+  var knobWrap    = document.getElementById('knob-wrap');
+  var knobEl      = document.getElementById('knob-el');
+  var knobRim     = document.getElementById('knob-rim');
+  var beamEl      = document.getElementById('beam');
+  var beamDiag    = document.getElementById('beam-diag');
+  var beamHoriz   = document.getElementById('beam-horiz');
+  var beamBloom   = document.getElementById('beam-bloom');
+  var beamJoint   = document.getElementById('beam-joint');
+  var items       = section.querySelectorAll('[data-drive-item]');
+
+  var activeItem  = null;
+  var animFrame   = null;
+  var beamActive  = false;
+
+  // Entrance
+  var obs = new IntersectionObserver(function(ents) {
+    ents.forEach(function(en) {
+      if (en.isIntersecting) { section.classList.add('is-visible'); obs.unobserve(section); }
+    });
+  }, { threshold: 0.1 });
+  obs.observe(section);
+
+  /* ============================================================
+     GEOMETRY
+     ============================================================ */
+
+  function getKnobGeometry() {
+    var r = knobWrap.getBoundingClientRect();
+    return {
+      cx: r.left + r.width / 2,
+      cy: r.top  + r.height / 2,
+      radius: r.width / 2 + 6
+    };
+  }
+
+  function getJoint(item) {
+    var r = item.getBoundingClientRect();
+    return { x: r.left, y: r.top + r.height * 0.75 };
+  }
+
+  function getEnd(item) {
+    var r = item.getBoundingClientRect();
+    return { x: r.left + r.width, y: r.top + r.height * 0.75 };
+  }
+
+  function computeBeamGeometry(item) {
+    var k = getKnobGeometry();
+    var j = getJoint(item);
+    var e = getEnd(item);
+
+    var dx = j.x - k.cx;
+    var dy = j.y - k.cy;
+    var angle = Math.atan2(dy, dx);
+
+    var startX = k.cx + Math.cos(angle) * k.radius;
+    var startY = k.cy + Math.sin(angle) * k.radius;
+
+    var ddx = j.x - startX;
+    var ddy = j.y - startY;
+    var diagLen = Math.sqrt(ddx * ddx + ddy * ddy);
+
+    var horizLen = e.x - j.x;
+
+    return {
+      startX: startX,
+      startY: startY,
+      jointX: j.x,
+      jointY: j.y,
+      endX: e.x,
+      angle: angle,
+      diagLen: diagLen,
+      horizLen: horizLen,
+      knobCx: k.cx,
+      knobCy: k.cy,
+      knobRadius: k.radius
+    };
+  }
+
+  /* ============================================================
+     BEAM POSITIONING
+     ============================================================ */
+
+  function positionBeamFull(geo) {
+    beamDiag.style.transform =
+      'translate(' + geo.startX + 'px,' + (geo.startY - 1.25) + 'px) rotate(' + geo.angle + 'rad)';
+    beamDiag.style.width = (geo.diagLen + 1) + 'px';
+
+    beamHoriz.style.transform =
+      'translate(' + (geo.jointX - 1) + 'px,' + (geo.jointY - 1.25) + 'px) rotate(0rad)';
+    beamHoriz.style.width = (geo.horizLen + 2) + 'px';
+
+    beamBloom.style.left = geo.startX + 'px';
+    beamBloom.style.top  = geo.startY + 'px';
+
+    beamJoint.style.left = geo.jointX + 'px';
+    beamJoint.style.top  = geo.jointY + 'px';
+
+    var rimAngleDeg = geo.angle * (180 / Math.PI) - 36 - 90;
+    knobWrap.style.setProperty('--beam-angle', rimAngleDeg + 'deg');
+  }
+
+  function setBeamOpacity(diagOp, horizOp, bloomOp, jointOp) {
+    beamDiag.style.opacity  = diagOp;
+    beamHoriz.style.opacity = horizOp;
+    beamBloom.style.opacity = bloomOp;
+    beamJoint.style.opacity = jointOp !== undefined ? jointOp : bloomOp;
+  }
+
+  /* ============================================================
+     ANIMATION — Sequential: diagonal then horizontal
+     ============================================================ */
+
+  function animateBeamIn(item) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+
+    var geo = computeBeamGeometry(item);
+
+    positionBeamFull(geo);
+
+    knobWrap.classList.add('beam-active');
+
+    beamDiag.style.width    = '0px';
+    beamHoriz.style.width   = '0px';
+    setBeamOpacity(0, 0, 0, 0);
+
+    var DIAG_DUR  = 220;
+    var HORIZ_DUR = 160;
+    var TOTAL_DUR = DIAG_DUR + HORIZ_DUR;
+    var t0 = null;
+
+    function tick(ts) {
+      if (!t0) t0 = ts;
+      var elapsed = ts - t0;
+      var rawTotal = Math.min(elapsed / TOTAL_DUR, 1);
+
+      if (elapsed <= DIAG_DUR) {
+        var dp = Math.min(elapsed / DIAG_DUR, 1);
+        var ease = 1 - Math.pow(1 - dp, 3);
+        var w = ease * (geo.diagLen + 1);
+
+        beamDiag.style.width = w + 'px';
+        beamDiag.style.opacity = Math.min(ease * 2.5, 1);
+
+        beamBloom.style.opacity = Math.min(ease * 3, 1);
+
+        beamJoint.style.opacity = Math.min(Math.max((dp - 0.7) / 0.3, 0), 1);
+
+        beamHoriz.style.width   = '0px';
+        beamHoriz.style.opacity = 0;
+
+      } else {
+        beamDiag.style.width   = (geo.diagLen + 1) + 'px';
+        beamDiag.style.opacity = 1;
+        beamBloom.style.opacity = 1;
+        beamJoint.style.opacity = 1;
+
+        var he = elapsed - DIAG_DUR;
+        var hp = Math.min(he / HORIZ_DUR, 1);
+        var hease = 1 - Math.pow(1 - hp, 3);
+        var hw = hease * (geo.horizLen + 2);
+
+        beamHoriz.style.width   = hw + 'px';
+        beamHoriz.style.opacity = Math.min(hease * 2, 1);
+      }
+
+      beamActive = true;
+
+      if (rawTotal < 1) {
+        animFrame = requestAnimationFrame(tick);
+      }
+    }
+    animFrame = requestAnimationFrame(tick);
+  }
+
+  function animateBeamOut() {
+    if (animFrame) cancelAnimationFrame(animFrame);
+
+    knobWrap.classList.remove('beam-active');
+
+    var t0 = null;
+    var DUR = 150;
+    var dOp = parseFloat(beamDiag.style.opacity)  || 0;
+    var hOp = parseFloat(beamHoriz.style.opacity) || 0;
+    var bOp = parseFloat(beamBloom.style.opacity)  || 0;
+    var jOp = parseFloat(beamJoint.style.opacity)  || 0;
+
+    function tick(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min((ts - t0) / DUR, 1);
+      var ease = 1 - Math.pow(1 - p, 3);
+      var fade = 1 - ease;
+
+      beamDiag.style.opacity  = dOp * fade;
+      beamHoriz.style.opacity = hOp * fade;
+      beamBloom.style.opacity = bOp * fade;
+      beamJoint.style.opacity = jOp * fade;
+
+      if (p < 1) animFrame = requestAnimationFrame(tick);
+      else {
+        beamActive = false;
+        beamDiag.style.width    = '0px';
+        beamHoriz.style.width   = '0px';
+      }
+    }
+    animFrame = requestAnimationFrame(tick);
+  }
+
+  function updateBeamInstant() {
+    if (!activeItem || !beamActive) return;
+    var geo = computeBeamGeometry(activeItem);
+    positionBeamFull(geo);
+    beamDiag.style.width   = (geo.diagLen + 1) + 'px';
+    beamHoriz.style.width  = (geo.horizLen + 2) + 'px';
+    setBeamOpacity(1, 1, 1, 1);
+  }
+
+  /* ============================================================
+     ACTIVATE / DEACTIVATE
+     ============================================================ */
+
+  function activate(item) {
+    if (activeItem === item) return;
+    if (activeItem) activeItem.classList.remove('is-hovered');
+    activeItem = item;
+    item.classList.add('is-hovered');
+    animateBeamIn(item);
+  }
+
+  function deactivate() {
+    items.forEach(function(it) { it.classList.remove('is-hovered'); });
+    activeItem = null;
+    animateBeamOut();
+  }
+
+  /* ============================================================
+     EVENTS
+     ============================================================ */
+
+  items.forEach(function(item, idx) {
+    item.addEventListener('mouseenter', function() { activate(item); });
+    item.addEventListener('touchstart', function(ev) {
+      ev.preventDefault();
+      if (activeItem === item) {
+        var h = item.getAttribute('href');
+        if (h && h !== '#') window.location.href = h;
+        return;
+      }
+      activate(item);
+    }, { passive: false });
+
+    item.addEventListener('mouseenter', function() {
+      var angle = (idx - Math.floor(items.length / 2)) * 12;
+      knobEl.style.transform = 'rotate(' + angle + 'deg)';
+    });
+  });
+
+  section.addEventListener('mouseleave', function() {
+    deactivate();
+    knobEl.style.transform = 'rotate(0deg)';
+  });
+
+  window.addEventListener('resize', function() {
+    if (activeItem && beamActive) requestAnimationFrame(updateBeamInstant);
+  });
+  window.addEventListener('scroll', function() {
+    if (activeItem && beamActive) requestAnimationFrame(updateBeamInstant);
+  }, { passive: true });
+
+})();
+</script>
+</body>
+</html>
