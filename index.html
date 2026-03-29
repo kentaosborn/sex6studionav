@@ -436,28 +436,34 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   .drive-nav {
-    --dn-knob-size: 100px;
-    --dn-font-size: 20px;
+    --dn-knob-size: 150px;
+    --dn-font-size: 30px;
     --dn-bg-image: url('idrive-gs-mobile.jpg');
 
     background-position: 10% center;
   }
   .drive-nav__inner {
-  gap: 35px;
-  padding-left: 120px; /* <-- increase this number */
+  gap: 52px;
+  padding-left: 80px;
 }
+  .drive-nav__menu {
+    gap: clamp(28px, 4.5vh, 56px);
+  }
 }
 @media (max-width: 480px) {
   .drive-nav { 
-    --dn-knob-size: 80px; 
-    --dn-font-size: 17px; 
+    --dn-knob-size: 120px; 
+    --dn-font-size: 25.5px; 
   }
 
   .drive-nav__inner { 
-    gap: 24px; 
-    padding-left: 60px; /* adjust this */
+    gap: 36px; 
+    padding-left: 40px;
     margin-top: -100px;
 
+  }
+  .drive-nav__menu {
+    gap: clamp(24px, 4vh, 48px);
   }
 }
 
