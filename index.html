@@ -435,8 +435,15 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
 }
 }
 @media (max-width: 480px) {
-  .drive-nav { --dn-knob-size: 80px; --dn-font-size: 17px; }
-  .drive-nav__inner { gap: 24px; padding-left: 16px; }
+  .drive-nav { 
+    --dn-knob-size: 80px; 
+    --dn-font-size: 17px; 
+  }
+
+  .drive-nav__inner { 
+    gap: 24px; 
+    padding-left: 80px; /* adjust this */
+  }
 }
 
 /* ---- Entrance animation ---- */
