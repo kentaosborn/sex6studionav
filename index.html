@@ -21,6 +21,7 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   --dn-font-size: 28px;
   --beam-angle: 0rad;
   --dn-bg-image: url('idrive-gs.jpg');
+  --knob-rotation: 0deg;
 
   position: relative;
   width: 100%;
@@ -79,6 +80,10 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   border-radius: 50%;
   position: relative;
   cursor: pointer;
+  /* FIX: Use CSS variable for rotation, force single composited layer */
+  transform: rotate(var(--knob-rotation)) translateZ(0);
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   will-change: transform;
   transition: transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -159,17 +164,20 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   z-index: 2;
 }
 
-/* Knob logo */
+/* FIX: Knob logo — centered WITHOUT transform, so parent's rotation
+   is the only transform in the chain. This eliminates the mobile Safari
+   bug where competing transforms on parent+child desync compositing. */
 .drive-nav__knob-logo {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  /* Center via inset + margin auto instead of top/left + translate */
+  inset: 15%;
   width: 70%;
   height: 70%;
+  margin: auto;
   object-fit: contain;
   pointer-events: none;
   z-index: 3;
+  /* No transform at all — inherits parent rotation cleanly */
 }
 
 /* Concentric detail rings */
@@ -719,6 +727,14 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   }
 
   /* ============================================================
+     KNOB ROTATION — CSS custom property approach
+     ============================================================ */
+
+  function setKnobRotation(deg) {
+    knobWrap.style.setProperty('--knob-rotation', deg + 'deg');
+  }
+
+  /* ============================================================
      ANIMATION — Sequential: diagonal then horizontal
      ============================================================ */
 
@@ -860,15 +876,16 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
       activate(item);
     }, { passive: false });
 
+    /* FIX: Use CSS custom property instead of direct style.transform */
     item.addEventListener('mouseenter', function() {
       var angle = (idx - Math.floor(items.length / 2)) * 12;
-      knobEl.style.transform = 'rotate(' + angle + 'deg)';
+      setKnobRotation(angle);
     });
   });
 
   section.addEventListener('mouseleave', function() {
     deactivate();
-    knobEl.style.transform = 'rotate(0deg)';
+    setKnobRotation(0);
   });
 
   window.addEventListener('resize', function() {
