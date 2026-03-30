@@ -844,19 +844,31 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
 
   /* ============================================================
      ACTIVATE / DEACTIVATE
+     Rotation is computed here so it fires for BOTH mouse & touch.
      ============================================================ */
+
+  // Build an index map so we can look up any item's position
+  var itemIndex = new Map();
+  items.forEach(function(item, idx) { itemIndex.set(item, idx); });
 
   function activate(item) {
     if (activeItem === item) return;
     if (activeItem) activeItem.classList.remove('is-hovered');
     activeItem = item;
     item.classList.add('is-hovered');
+
+    // Knob rotation — works identically for mouse and touch
+    var idx = itemIndex.get(item);
+    var angle = (idx - Math.floor(items.length / 2)) * 12;
+    setKnobRotation(angle);
+
     animateBeamIn(item);
   }
 
   function deactivate() {
     items.forEach(function(it) { it.classList.remove('is-hovered'); });
     activeItem = null;
+    setKnobRotation(0);
     animateBeamOut();
   }
 
@@ -864,10 +876,11 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
      EVENTS
      ============================================================ */
 
-  items.forEach(function(item, idx) {
+  items.forEach(function(item) {
     item.addEventListener('mouseenter', function() { activate(item); });
     item.addEventListener('touchstart', function(ev) {
       ev.preventDefault();
+      ev.stopPropagation();  // prevent the document touchstart from immediately deactivating
       if (activeItem === item) {
         var h = item.getAttribute('href');
         if (h && h !== '#') window.location.href = h;
@@ -875,18 +888,23 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
       }
       activate(item);
     }, { passive: false });
-
-    /* FIX: Use CSS custom property instead of direct style.transform */
-    item.addEventListener('mouseenter', function() {
-      var angle = (idx - Math.floor(items.length / 2)) * 12;
-      setKnobRotation(angle);
-    });
   });
 
   section.addEventListener('mouseleave', function() {
     deactivate();
-    setKnobRotation(0);
   });
+
+  // Touch outside any menu item → deactivate (mobile equivalent of mouseleave)
+  document.addEventListener('touchstart', function(ev) {
+    if (!activeItem) return;
+    // Check if the tap landed on a menu item
+    var target = ev.target;
+    var onItem = false;
+    items.forEach(function(item) {
+      if (item === target || item.contains(target)) onItem = true;
+    });
+    if (!onItem) deactivate();
+  }, { passive: true });
 
   window.addEventListener('resize', function() {
     if (activeItem && beamActive) requestAnimationFrame(updateBeamInstant);
