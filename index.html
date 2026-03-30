@@ -873,38 +873,48 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   }
 
   /* ============================================================
-     EVENTS
+     EVENTS — Pointer Events (unified mouse / touch / stylus)
      ============================================================ */
 
   items.forEach(function(item) {
-    item.addEventListener('mouseenter', function() { activate(item); });
-    item.addEventListener('touchstart', function(ev) {
-      ev.preventDefault();
-      ev.stopPropagation();  // prevent the document touchstart from immediately deactivating
+
+    // pointerenter: hover activation (mouse/pen only, NOT touch)
+    item.addEventListener('pointerenter', function(ev) {
+      if (ev.pointerType === 'touch') return;  // ignore touch hover
+      activate(item);
+    });
+
+    // pointerdown: tap/click activation OR navigation
+    item.addEventListener('pointerdown', function(ev) {
       if (activeItem === item) {
+        // Already active → navigate
         var h = item.getAttribute('href');
         if (h && h !== '#') window.location.href = h;
         return;
       }
+      // Not yet active → activate (prevents default to stop link follow on first tap)
+      ev.preventDefault();
       activate(item);
-    }, { passive: false });
+    });
+
   });
 
-  section.addEventListener('mouseleave', function() {
+  // Mouse leave on the section → deactivate (desktop hover-out)
+  section.addEventListener('pointerleave', function(ev) {
+    if (ev.pointerType === 'touch') return;  // touch doesn't "leave"
     deactivate();
   });
 
-  // Touch outside any menu item → deactivate (mobile equivalent of mouseleave)
-  document.addEventListener('touchstart', function(ev) {
+  // Tap/click outside any menu item → deactivate
+  document.addEventListener('pointerdown', function(ev) {
     if (!activeItem) return;
-    // Check if the tap landed on a menu item
     var target = ev.target;
     var onItem = false;
     items.forEach(function(item) {
       if (item === target || item.contains(target)) onItem = true;
     });
     if (!onItem) deactivate();
-  }, { passive: true });
+  });
 
   window.addEventListener('resize', function() {
     if (activeItem && beamActive) requestAnimationFrame(updateBeamInstant);
