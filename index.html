@@ -887,9 +887,14 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
     // pointerdown: tap/click activation OR navigation
     item.addEventListener('pointerdown', function(ev) {
       if (activeItem === item) {
-        // Already active → navigate
         var h = item.getAttribute('href');
-        if (h && h !== '#') window.location.href = h;
+
+        if (h && h !== '#') {
+          setTimeout(function() {
+            window.location.href = h;
+          }, 500);
+        }
+
         return;
       }
       // Not yet active → activate (prevents default to stop link follow on first tap)
