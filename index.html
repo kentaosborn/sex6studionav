@@ -445,7 +445,7 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
 }
 
 /* ================================================================
-   INTRO OVERLAY — VIDEO VERSION
+   INTRO OVERLAY
    ================================================================ */
 .intro-overlay {
   position: fixed;
@@ -456,8 +456,9 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 40px;
   opacity: 1;
-  transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: opacity 1s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .intro-overlay.is-exiting {
@@ -465,6 +466,7 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   pointer-events: none;
 }
 
+/* ---- VIDEO (desktop only, hidden on mobile via JS) ---- */
 .intro-video {
   position: absolute;
   inset: 0;
@@ -474,6 +476,21 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   z-index: 0;
 }
 
+/* ---- LOGO (mobile only, hidden on desktop via JS) ---- */
+.intro-logo {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(0.92);
+  z-index: 1;
+}
+
+.intro-logo.is-animating {
+  animation: intro-logo-in 1s cubic-bezier(0.23, 1, 0.32, 1) 0.3s forwards;
+}
+
+/* ---- ENTER button ---- */
 .intro-enter {
   position: relative;
   z-index: 1;
@@ -506,6 +523,10 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   box-shadow: 0 0 20px rgba(255,255,255,0.05);
 }
 
+@keyframes intro-logo-in {
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* ---- Entrance animation ---- */
 .drive-nav__item { opacity: 0; transform: translateX(22px); }
 .drive-nav.is-visible .drive-nav__item {
@@ -522,7 +543,7 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
 <body>
 
 <div class="intro-overlay" id="intro-overlay">
-  <!-- Replace intro.mp4 with your video file -->
+  <!-- VIDEO: desktop intro -->
   <video
     class="intro-video"
     id="intro-video"
@@ -534,6 +555,8 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
     disablepictureinpicture
     controlslist="nodownload nofullscreen noremoteplayback"
   ></video>
+  <!-- LOGO: mobile intro -->
+  <img src="s6nav.png" alt="Logo" class="intro-logo" id="intro-logo">
   <button class="intro-enter" id="intro-enter">ENTER</button>
 </div>
 
@@ -575,42 +598,78 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   var overlay = document.getElementById('intro-overlay');
   var btn     = document.getElementById('intro-enter');
   var video   = document.getElementById('intro-video');
+  var logo    = document.getElementById('intro-logo');
 
-  /* ---- Autoplay the video ---- */
-  function startVideo() {
-    var playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(function() {
-        // Autoplay blocked — show the enter button immediately as fallback
-        btn.classList.add('is-visible');
-      });
-    }
-  }
+  var MOBILE_BP = 768;
+  var isMobile  = window.innerWidth <= MOBILE_BP;
 
-  // Try playing once metadata is ready (covers most browsers)
-  if (video.readyState >= 1) {
-    startVideo();
+  /* ============================================================
+     MOBILE PATH — original logo + button intro
+     ============================================================ */
+  if (isMobile) {
+    // Hide video entirely so it doesn't load on mobile
+    video.style.display = 'none';
+    video.removeAttribute('src');
+
+    // Show & animate logo
+    logo.style.display = 'block';
+    logo.classList.add('is-animating');
+
+    // Reveal enter button after logo animation completes (0.3s delay + 1s anim)
+    setTimeout(function() {
+      btn.classList.add('is-visible');
+    }, 1300);
+
+  /* ============================================================
+     DESKTOP PATH — video intro
+     ============================================================ */
   } else {
-    video.addEventListener('loadedmetadata', startVideo, { once: true });
+    // Hide logo on desktop
+    logo.style.display = 'none';
+
+    function startVideo() {
+      var playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(function() {
+          // Autoplay blocked — show enter button as fallback
+          btn.classList.add('is-visible');
+        });
+      }
+    }
+
+    if (video.readyState >= 1) {
+      startVideo();
+    } else {
+      video.addEventListener('loadedmetadata', startVideo, { once: true });
+    }
+
+    // When video ends: freeze on last frame, reveal button
+    video.addEventListener('ended', function() {
+      video.pause();
+      btn.classList.add('is-visible');
+    });
   }
 
-  /* ---- When video ends: freeze on last frame & reveal button ---- */
-  video.addEventListener('ended', function() {
-    // Pause keeps the last frame visible (no loop, no poster swap)
-    video.pause();
-    btn.classList.add('is-visible');
-  });
-
-  /* ---- ENTER button dismisses overlay ---- */
+  /* ============================================================
+     ENTER BUTTON — smooth fade for both paths
+     ============================================================ */
   btn.addEventListener('click', function() {
+    // Disable button immediately to prevent double-clicks
+    btn.style.pointerEvents = 'none';
+
     overlay.classList.add('is-exiting');
-    overlay.addEventListener('transitionend', function handler() {
+    overlay.addEventListener('transitionend', function handler(e) {
+      // Only respond to the overlay's own opacity transition
+      if (e.target !== overlay) return;
       overlay.removeEventListener('transitionend', handler);
       overlay.style.display = 'none';
-      // Stop video to free memory
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
+
+      // Free video memory on desktop
+      if (!isMobile) {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      }
     });
   });
 })();
