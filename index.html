@@ -491,7 +491,7 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   animation: intro-logo-in 1s cubic-bezier(0.23, 1, 0.32, 1) 0.3s forwards;
 }
 
-/* ---- ENTER button ---- */
+/* ---- ENTER button (text — desktop) ---- */
 .intro-enter {
   position: relative;
   z-index: 1;
@@ -531,6 +531,38 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   }
 }
 
+/* ---- ENTER button (image — mobile only) ---- */
+.intro-enter-img {
+  position: relative;
+  z-index: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.7s cubic-bezier(0.23, 1, 0.32, 1), transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: none;
+  display: none;
+}
+
+.intro-enter-img.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.intro-enter-img img {
+  display: block;
+  max-width: 200px;
+  height: auto;
+}
+
+.intro-enter-img:active {
+  transform: scale(0.95);
+}
+
 @keyframes intro-logo-in {
   to { opacity: 1; transform: scale(1); }
 }
@@ -565,7 +597,12 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   ></video>
   <!-- LOGO: mobile intro -->
   <img src="s6nav.png" alt="Logo" class="intro-logo" id="intro-logo">
+  <!-- ENTER: text button (desktop) -->
   <button class="intro-enter" id="intro-enter">ENTER</button>
+  <!-- ENTER: image button (mobile only) -->
+  <button class="intro-enter-img" id="intro-enter-img" aria-label="Enter">
+    <img src="s6button.png" alt="Enter">
+  </button>
 </div>
 
 <section class="drive-nav" id="drive-nav-preview" role="navigation" aria-label="Drive Navigation">
@@ -603,37 +640,64 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
 
 <script>
 (function() {
-  var overlay = document.getElementById('intro-overlay');
-  var btn     = document.getElementById('intro-enter');
-  var video   = document.getElementById('intro-video');
-  var logo    = document.getElementById('intro-logo');
+  var overlay  = document.getElementById('intro-overlay');
+  var btn      = document.getElementById('intro-enter');
+  var btnImg   = document.getElementById('intro-enter-img');
+  var video    = document.getElementById('intro-video');
+  var logo     = document.getElementById('intro-logo');
 
   var MOBILE_BP = 768;
   var isMobile  = window.innerWidth <= MOBILE_BP;
 
+  /* Shared dismiss handler — works for both buttons */
+  function dismissOverlay() {
+    // Disable both buttons to prevent double-clicks
+    btn.style.pointerEvents = 'none';
+    btnImg.style.pointerEvents = 'none';
+
+    overlay.classList.add('is-exiting');
+    overlay.addEventListener('transitionend', function handler(e) {
+      if (e.target !== overlay) return;
+      overlay.removeEventListener('transitionend', handler);
+      overlay.style.display = 'none';
+
+      // Free video memory on desktop
+      if (!isMobile) {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      }
+    });
+  }
+
   /* ============================================================
-     MOBILE PATH — original logo + button intro
+     MOBILE PATH — logo + image button
      ============================================================ */
   if (isMobile) {
     // Hide video entirely so it doesn't load on mobile
     video.style.display = 'none';
     video.removeAttribute('src');
 
+    // Hide text button, show image button
+    btn.style.display = 'none';
+    btnImg.style.display = 'block';
+
     // Show & animate logo
     logo.style.display = 'block';
     logo.classList.add('is-animating');
 
-    // Reveal enter button after logo animation completes (0.3s delay + 1s anim)
+    // Reveal image enter button after logo animation completes (0.3s delay + 1s anim)
     setTimeout(function() {
-      btn.classList.add('is-visible');
+      btnImg.classList.add('is-visible');
     }, 1300);
 
   /* ============================================================
-     DESKTOP PATH — video intro
+     DESKTOP PATH — video intro + text button
      ============================================================ */
   } else {
-    // Hide logo on desktop
+    // Hide logo and image button on desktop
     logo.style.display = 'none';
+    btnImg.style.display = 'none';
 
     function startVideo() {
       var playPromise = video.play();
@@ -659,27 +723,10 @@ html, body { background: #050505; height: 100%; overflow: hidden; }
   }
 
   /* ============================================================
-     ENTER BUTTON — smooth fade for both paths
+     ENTER BUTTONS — both use the same dismiss handler
      ============================================================ */
-  btn.addEventListener('click', function() {
-    // Disable button immediately to prevent double-clicks
-    btn.style.pointerEvents = 'none';
-
-    overlay.classList.add('is-exiting');
-    overlay.addEventListener('transitionend', function handler(e) {
-      // Only respond to the overlay's own opacity transition
-      if (e.target !== overlay) return;
-      overlay.removeEventListener('transitionend', handler);
-      overlay.style.display = 'none';
-
-      // Free video memory on desktop
-      if (!isMobile) {
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
-      }
-    });
-  });
+  btn.addEventListener('click', dismissOverlay);
+  btnImg.addEventListener('click', dismissOverlay);
 })();
 </script>
 
